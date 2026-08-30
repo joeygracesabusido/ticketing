@@ -1,4 +1,4 @@
 import strawberry
+from decimal import Decimal
 
-# Placeholder scalars for Task 4 — extend as needed
-# Example: DateTime scalar etc. Currently minimal to satisfy file existence.
+DecimalScalar = strawberry.scalar(Decimal, serialize=lambda v: str(v), parse_value=lambda v: Decimal(v))

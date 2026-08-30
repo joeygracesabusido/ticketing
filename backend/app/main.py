@@ -1,20 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config.settings import get_settings
-import strawberry
 from strawberry.fastapi import GraphQLRouter
+from app.graphql.schema import schema
 
 settings = get_settings()
 
-
-@strawberry.type
-class Query:
-    @strawberry.field
-    def hello(self) -> str:
-        return "world"
-
-
-schema = strawberry.Schema(query=Query)
 graphql_app = GraphQLRouter(schema)
 
 app = FastAPI(title="Ferry Ticketing API")
