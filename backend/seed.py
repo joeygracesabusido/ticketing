@@ -3,7 +3,7 @@ import os
 import uuid
 import random
 import datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 # Ensure backend dir is in path when run as `python backend/seed.py` vs `python seed.py`
 # Already handled by PYTHONPATH, but keep importable
@@ -17,6 +17,8 @@ from app.models.accommodation import AccommodationType
 from app.models.trip import Trip, TripSeat
 from app.models.trip import TripStatus, TripSeatStatus
 from app.models.user import Role, User
+from app.models.passenger import PassengerType
+from app.models.fare import FareComponent, FareRule, Promotion, PromotionRule, VehicleFareRule, PromotionDiscountType
 from app.utils.security import hash_password
 from sqlalchemy import select, func, text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -73,6 +75,66 @@ ROLES = [
     ("TICKETING_AGENT", "Ticketing Agent", "Ticketing agent"),
     ("FINANCE", "Finance", "Finance team"),
     ("SUPPORT", "Support", "Support team"),
+]
+
+
+PASSENGER_TYPES = [
+    ("ADULT", "Adult", "Ages 12+", Decimal("0.00"), False),
+    ("CHILD", "Child", "Ages 2-11", Decimal("20.00"), False),
+    ("SENIOR", "Senior Citizen", "60+", Decimal("20.00"), True),
+    ("PWD", "PWD", "Persons with disability", Decimal("20.00"), True),
+    ("STUDENT", "Student", "With valid ID", Decimal("15.00"), True),
+    ("INFANT", "Infant", "Under 2", Decimal("90.00"), False),
+]
+
+FARE_COMPONENTS = [
+    ("TERMINAL_FEE", "Terminal Fee", Decimal("30.00"), None, False),
+    ("SERVICE_FEE", "Service Fee", Decimal("50.00"), None, False),
+    ("VAT", "VAT 12%", None, Decimal("12.00"), True),
+    ("FUEL_SURCHARGE", "Fuel Surcharge", Decimal("0.00"), None, False),
+    ("PORT_FEE", "Port Fee", Decimal("15.00"), None, False),
+]
+
+PROMOTIONS = [
+    (
+        "SUMMER20",
+        "Summer Sale 20%",
+        "20% off summer season",
+        PromotionDiscountType.PERCENT,
+        Decimal("20.00"),
+        100,
+        datetime.datetime(2026, 6, 1, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2026, 9, 30, 23, 59, 59, tzinfo=datetime.timezone.utc),
+    ),
+    (
+        "WELCOME50",
+        "Welcome Discount",
+        "Flat 50 off for new users",
+        PromotionDiscountType.FIXED,
+        Decimal("50.00"),
+        500,
+        None,
+        None,
+    ),
+    (
+        "SENIORPLUS",
+        "Senior Plus",
+        "Extra 10% for seniors",
+        PromotionDiscountType.PERCENT,
+        Decimal("10.00"),
+        200,
+        datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2026, 12, 31, 23, 59, 59, tzinfo=datetime.timezone.utc),
+    ),
+]
+
+VEHICLE_FARE_RULES = [
+    ("MOTORCYCLE", Decimal("500.00")),
+    ("SEDAN", Decimal("1200.00")),
+    ("SUV", Decimal("1400.00")),
+    ("VAN", Decimal("1800.00")),
+    ("PICKUP", Decimal("1600.00")),
+    ("TRUCK", Decimal("3000.00")),
 ]
 
 
@@ -470,6 +532,163 @@ async def seed():
         else:
             print(f"  Trips already exist ({trip_count_before}), skipping creation")
 
+        # --- Passenger types (idempotent) ---
+        res = await db.execute(select(func.count()).select_from(PassengerType))
+        pt_count_before = res.scalar_one()
+        existing_pt_codes = set()
+        pt_map = {}
+        if pt_count_before > 0:
+            res = await db.execute(select(PassengerType))
+            for pt in res.scalars().all():
+                existing_pt_codes.add(pt.code)
+                pt_map[pt.code] = pt
+        pt_created = 0
+        for code, name, desc, discount, requires_id in PASSENGER_TYPES:
+            if code not in existing_pt_codes:
+                # quantized discount
+                disc_q = discount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                pt = PassengerType(
+                    id=str(uuid.uuid4()),
+                    code=code,
+                    name=name,
+                    description=desc,
+                    discount_percent=disc_q,
+                    requires_id=requires_id,
+                    active=True,
+                )
+                db.add(pt)
+                pt_map[code] = pt
+                pt_created += 1
+                existing_pt_codes.add(code)
+        if pt_created:
+            await db.flush()
+            print(f"  Created {pt_created} passenger_types")
+        else:
+            if not pt_map and pt_count_before > 0:
+                res = await db.execute(select(PassengerType))
+                for pt in res.scalars().all():
+                    pt_map[pt.code] = pt
+
+        # --- Fare components (idempotent) ---
+        res = await db.execute(select(func.count()).select_from(FareComponent))
+        fc_count_before = res.scalar_one()
+        existing_fc_codes = set()
+        if fc_count_before > 0:
+            res = await db.execute(select(FareComponent.code))
+            existing_fc_codes = {r[0] for r in res.all()}
+        fc_created = 0
+        for code, name, amount, percent, is_percent in FARE_COMPONENTS:
+            if code not in existing_fc_codes:
+                amt_q = amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if amount is not None else None
+                pct_q = percent.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if percent is not None else None
+                fc = FareComponent(
+                    id=str(uuid.uuid4()),
+                    code=code,
+                    name=name,
+                    description=name,
+                    amount=amt_q,
+                    percent=pct_q,
+                    is_percent=is_percent,
+                    active=True,
+                )
+                db.add(fc)
+                fc_created += 1
+                existing_fc_codes.add(code)
+        if fc_created:
+            await db.flush()
+            print(f"  Created {fc_created} fare_components")
+        # no need to map
+
+        # --- Fare rules (idempotent) 4 routes x 6 accommodations = 24 ---
+        res = await db.execute(select(func.count()).select_from(FareRule))
+        fr_count_before = res.scalar_one()
+        existing_fr_keys = set()
+        if fr_count_before > 0:
+            res = await db.execute(select(FareRule.route_id, FareRule.accommodation_type_id))
+            for route_id, acc_id in res.all():
+                existing_fr_keys.add((route_id, acc_id))
+        fr_created = 0
+        for route_code, route in route_map.items():
+            surcharge = ROUTE_SURCHARGE.get(route_code, Decimal("200.00"))
+            for acc_code, acc in acc_map.items():
+                key = (route.id, acc.id)
+                if key not in existing_fr_keys:
+                    base_fare = (acc.base_price + surcharge).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    fr = FareRule(
+                        id=str(uuid.uuid4()),
+                        route_id=route.id,
+                        accommodation_type_id=acc.id,
+                        passenger_type_id=None,
+                        vessel_id=None,
+                        base_fare=base_fare,
+                        active=True,
+                    )
+                    db.add(fr)
+                    fr_created += 1
+                    existing_fr_keys.add(key)
+        if fr_created:
+            await db.flush()
+            print(f"  Created {fr_created} fare_rules")
+        else:
+            # if already 24, keep silent
+            pass
+
+        # --- Promotions (idempotent) ---
+        res = await db.execute(select(func.count()).select_from(Promotion))
+        promo_count_before = res.scalar_one()
+        existing_promo_codes = set()
+        if promo_count_before > 0:
+            res = await db.execute(select(Promotion.code))
+            existing_promo_codes = {r[0] for r in res.all()}
+        promo_created = 0
+        for code, name, desc, disc_type, disc_val, max_uses, valid_from, valid_to in PROMOTIONS:
+            if code not in existing_promo_codes:
+                val_q = disc_val.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                promo = Promotion(
+                    id=str(uuid.uuid4()),
+                    code=code,
+                    name=name,
+                    description=desc,
+                    discount_type=disc_type,
+                    discount_value=val_q,
+                    max_uses=max_uses,
+                    used_count=0,
+                    active=True,
+                    valid_from=valid_from,
+                    valid_to=valid_to,
+                    min_passengers=1,
+                )
+                db.add(promo)
+                promo_created += 1
+                existing_promo_codes.add(code)
+        if promo_created:
+            await db.flush()
+            print(f"  Created {promo_created} promotions")
+
+        # --- Vehicle fare rules (idempotent) ---
+        res = await db.execute(select(func.count()).select_from(VehicleFareRule))
+        vfr_count_before = res.scalar_one()
+        existing_vtype = set()
+        if vfr_count_before > 0:
+            res = await db.execute(select(VehicleFareRule.vehicle_type))
+            existing_vtype = {r[0] for r in res.all()}
+        vfr_created = 0
+        for vtype, fee in VEHICLE_FARE_RULES:
+            if vtype not in existing_vtype:
+                fee_q = fee.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                vfr = VehicleFareRule(
+                    id=str(uuid.uuid4()),
+                    vehicle_type=vtype,
+                    base_fee=fee_q,
+                    active=True,
+                )
+                db.add(vfr)
+                vfr_created += 1
+                existing_vtype.add(vtype)
+        if vfr_created:
+            await db.flush()
+            print(f"  Created {vfr_created} vehicle_fare_rules")
+
         await db.commit()
 
         # --- Final counts for summary ---
@@ -496,11 +715,24 @@ async def seed():
         print(f"  TripSeats: {counts['trip_seats']}, VesselSeats: {counts['vessel_seats']}")
         print(f"  VesselDecks: {counts['vessel_decks']}, VesselSections: {counts['vessel_sections']}")
 
+        # Fare counts
+        for model, label in [
+            (PassengerType, "passenger_types"),
+            (FareComponent, "fare_components"),
+            (FareRule, "fare_rules"),
+            (Promotion, "promotions"),
+            (VehicleFareRule, "vehicle_fares"),
+        ]:
+            res = await db.execute(select(func.count()).select_from(model))
+            counts[label] = res.scalar_one()
+        print(f"  PassengerTypes: {counts['passenger_types']}, FareComponents: {counts['fare_components']}, FareRules: {counts['fare_rules']}, Promotions: {counts['promotions']}, VehicleFares: {counts['vehicle_fares']}")
+
         seeded_ports = counts['ports']
         seeded_routes = counts['routes']
         seeded_vessels = counts['vessels']
         seeded_trips = counts['trips']
         print(f"\nSeeded {seeded_ports} ports, {seeded_routes} routes, {seeded_vessels} vessels, {seeded_trips} trips")
+        print(f"Seeded passenger_types {counts['passenger_types']}, fare_components {counts['fare_components']}, fare_rules {counts['fare_rules']}, promotions {counts['promotions']}, vehicle_fares {counts['vehicle_fares']}")
 
         # --- GraphQL verification ---
         print("\nVerifying via GraphQL (ASGI)...")
