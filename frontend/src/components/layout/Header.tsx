@@ -1,0 +1,34 @@
+import { Link } from "react-router-dom"
+import { Ship } from "lucide-react"
+import { Button } from "@/components/ui/button"
+
+export function Header() {
+  return (
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <Link to="/" className="flex items-center gap-2 font-bold text-lg">
+          <Ship className="h-6 w-6 text-primary" />
+          Ferry Ticketing
+        </Link>
+        <nav className="flex items-center gap-2">
+          <Link to="/" className="text-sm font-medium hover:text-primary transition-colors px-3 py-2">
+            Home
+          </Link>
+          <Link to="/trips" className="text-sm font-medium hover:text-primary transition-colors px-3 py-2">
+            Trips
+          </Link>
+          <Link to="/login">
+            <Button variant="ghost" size="sm">
+              Login
+            </Button>
+          </Link>
+          <Link to="/register">
+            <Button size="sm">Register</Button>
+          </Link>
+        </nav>
+      </div>
+    </header>
+  )
+}
+
+export default Header
