@@ -15,5 +15,10 @@ def quantize_price(value: Decimal | str | float | int) -> Decimal:
     return to_decimal(value)
 
 
+def quantize(value: Decimal | str | float | int) -> Decimal:
+    """Alias for quantize_price / to_decimal - ensures money as Decimal(10,2)."""
+    return to_decimal(value)
+
+
 def format_price(value: Decimal) -> str:
     return format(to_decimal(value), ".2f")
