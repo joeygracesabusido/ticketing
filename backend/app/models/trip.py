@@ -37,7 +37,6 @@ class Trip(Base):
     __tablename__ = "trips"
     __table_args__ = (
         Index("ix_trips_route_vessel", "route_id", "vessel_id"),
-        Index("ix_trips_departure_at", "departure_at"),
         Index("ix_trips_status", "status"),
     )
 

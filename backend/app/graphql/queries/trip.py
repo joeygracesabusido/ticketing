@@ -109,7 +109,7 @@ class TripQuery:
                     .join(Route, Trip.route_id == Route.id)
                     .where(Route.origin_port_id == originPortId)
                     .where(Route.destination_port_id == destinationPortId)
-                    .where(func.date(Trip.departure_at) == departureDate.isoformat())
+                    .where(func.date(Trip.departure_at) == departureDate)
                     .order_by(Trip.departure_at)
                 )
                 res = await db.execute(q)
