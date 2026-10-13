@@ -9,6 +9,7 @@ import DashboardLayout from "@/app/DashboardLayout"
 import Overview from "@/pages/dashboard/Overview"
 import PortsAdmin from "@/pages/dashboard/Ports"
 import VesselsAdmin from "@/pages/dashboard/Vessels"
+import RoutesAdmin from "@/pages/dashboard/Routes"
 
 export const router = createBrowserRouter([
   { path: "/", element: <Home /> },
@@ -26,7 +27,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Overview /> },
           { path: "ports", element: <PortsAdmin /> },
           { path: "vessels", element: <VesselsAdmin /> },
-          { path: "routes", element: <Overview /> },
+          { path: "routes", element: <RoutesAdmin /> },
           { path: "trips", element: <Overview /> },
         ],
       },
