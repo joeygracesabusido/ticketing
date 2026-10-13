@@ -3,13 +3,12 @@ import { useNavigate } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { useQuery } from "@apollo/client"
+import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { PORTS } from "@/graphql/queries/ports"
 import { Search, Ship } from "lucide-react"
 
 const searchSchema = z.object({
@@ -44,17 +43,22 @@ const FALLBACK_PORTS: Port[] = [
 
 export function SearchWidget() {
   const navigate = useNavigate()
-  const { data } = useQuery(PORTS, {
-    fetchPolicy: "cache-first",
-    onError: () => {},
-  })
+  const [sbPorts, setSbPorts] = React.useState<Port[] | null>(null)
+
+  React.useEffect(() => {
+    if (!supabase) return
+    supabase
+      .from("ports")
+      .select("id, code, name, city")
+      .then(({ data, error }) => {
+        if (!error && data && data.length > 0) setSbPorts(data as Port[])
+      })
+  }, [])
 
   const ports: Port[] = React.useMemo(() => {
-    if (data?.ports && data.ports.length > 0) {
-      return data.ports
-    }
+    if (sbPorts && sbPorts.length > 0) return sbPorts
     return FALLBACK_PORTS
-  }, [data])
+  }, [sbPorts])
 
   const {
     register,

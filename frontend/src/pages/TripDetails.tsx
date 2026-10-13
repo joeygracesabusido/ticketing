@@ -1,7 +1,7 @@
+import * as React from "react"
 import { useParams, Link } from "react-router-dom"
-import { useQuery } from "@apollo/client"
 import { Header } from "@/components/layout/Header"
-import { GET_TRIP } from "@/graphql/queries/trips"
+import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,12 +10,75 @@ import { ArrowLeft, Ship, Clock, MapPin } from "lucide-react"
 
 export function TripDetails() {
   const { id } = useParams<{ id: string }>()
-  const { data, loading, error } = useQuery(GET_TRIP, {
-    variables: { id },
-    skip: !id,
-  })
+  const [trip, setTrip] = React.useState<any | null>(null)
+  const [loading, setLoading] = React.useState(Boolean(id))
+  const [error, setError] = React.useState<string | null>(null)
 
-  const trip = data?.trip
+  React.useEffect(() => {
+    if (!id) return
+    if (!supabase) {
+      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    ;(async () => {
+      try {
+        const { data: t, error: tripError } = await supabase!
+          .from("trips")
+          .select("id, departure_at, arrival_at, status, fare_from, booking_open, booking_close, route_id, vessel_id, departure_port_id, arrival_port_id")
+          .eq("id", id)
+          .single()
+        if (cancelled) return
+        if (tripError) throw new Error(tripError.message)
+        if (!t) {
+          setTrip(null)
+          setLoading(false)
+          return
+        }
+        const [{ data: route }, { data: vessel }, { data: ports }] = await Promise.all([
+          supabase!.from("routes").select("id, code, origin_port_id, destination_port_id, distance_km, estimated_duration_minutes").eq("id", t.route_id).single(),
+          supabase!.from("vessels").select("id, code, name, capacity, status").eq("id", t.vessel_id).single(),
+          supabase!.from("ports").select("id, code, name, city").in("id", [t.departure_port_id, t.arrival_port_id]),
+        ])
+        if (cancelled) return
+        const portById = new Map((ports ?? []).map((p) => [p.id, p]))
+        setTrip({
+          id: t.id,
+          departureAt: t.departure_at,
+          arrivalAt: t.arrival_at,
+          status: t.status,
+          fareFrom: t.fare_from,
+          bookingOpen: t.booking_open,
+          bookingClose: t.booking_close,
+          route: route
+            ? {
+                id: route.id,
+                code: route.code,
+                originPort: portById.get(route.origin_port_id),
+                destinationPort: portById.get(route.destination_port_id),
+                distanceKm: route.distance_km,
+                estimatedDurationMinutes: route.estimated_duration_minutes,
+              }
+            : undefined,
+          vessel,
+          departurePort: portById.get(t.departure_port_id),
+          arrivalPort: portById.get(t.arrival_port_id),
+        })
+        setLoading(false)
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Failed to load trip.")
+          setLoading(false)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [id])
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,7 +92,7 @@ export function TripDetails() {
         {error && (
           <Card>
             <CardContent className="p-6">
-              <p className="text-sm text-destructive">Failed to load trip: {error.message}</p>
+              <p className="text-sm text-destructive">Failed to load trip: {error}</p>
             </CardContent>
           </Card>
         )}
