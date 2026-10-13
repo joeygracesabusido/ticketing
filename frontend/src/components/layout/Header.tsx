@@ -2,10 +2,12 @@ import { Link } from "react-router-dom"
 import { Ship } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
+import { useLogout } from "@/hooks/useLogout"
 import { isAdmin } from "@/lib/roles"
 
 export function Header() {
-  const { role } = useAuth()
+  const { session, role } = useAuth()
+  const logout = useLogout()
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -25,14 +27,22 @@ export function Header() {
               Dashboard
             </Link>
           )}
-          <Link to="/login">
-            <Button variant="ghost" size="sm">
-              Login
+          {session ? (
+            <Button variant="ghost" size="sm" onClick={logout}>
+              Logout
             </Button>
-          </Link>
-          <Link to="/register">
-            <Button size="sm">Register</Button>
-          </Link>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button variant="ghost" size="sm">
+                  Login
+                </Button>
+              </Link>
+              <Link to="/register">
+                <Button size="sm">Register</Button>
+              </Link>
+            </>
+          )}
         </nav>
       </div>
     </header>
