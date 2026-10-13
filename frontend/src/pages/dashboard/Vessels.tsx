@@ -58,8 +58,11 @@ export function VesselsAdmin() {
   }
 
   const onSubmit = async (v: Form) => {
-    if (!supabase) return
-    const payload = { code: v.code, name: v.name, capacity: v.capacity ?? null, status: v.status || "active" }
+    if (!supabase) {
+      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      return
+    }
+    const payload = { code: v.code.toUpperCase(), name: v.name, capacity: v.capacity ?? null, status: v.status || "active" }
     const { error } = editing
       ? await supabase.from("vessels").update(payload).eq("id", editing.id)
       : await supabase.from("vessels").insert(payload)
@@ -73,7 +76,10 @@ export function VesselsAdmin() {
 
   async function onDelete(row: any) {
     if (!window.confirm(`Delete vessel ${row.code}?`)) return
-    if (!supabase) return
+    if (!supabase) {
+      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      return
+    }
     const { error } = await supabase.from("vessels").delete().eq("id", row.id)
     if (error) setError(error.message)
     else load()

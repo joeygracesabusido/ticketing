@@ -10,14 +10,19 @@ import { Select } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase"
 import { AdminTable } from "@/components/admin/AdminTable"
 
-const schema = z.object({
-  route_id: z.string().min(1, "Select route"),
-  vessel_id: z.string().min(1, "Select vessel"),
-  departure_at: z.string().min(1, "Select departure"),
-  arrival_at: z.string().min(1, "Select arrival"),
-  status: z.string().optional(),
-  fare_from: z.coerce.number().nonnegative().optional(),
-})
+const schema = z
+  .object({
+    route_id: z.string().min(1, "Select route"),
+    vessel_id: z.string().min(1, "Select vessel"),
+    departure_at: z.string().min(1, "Select departure"),
+    arrival_at: z.string().min(1, "Select arrival"),
+    status: z.string().optional(),
+    fare_from: z.coerce.number().nonnegative().optional(),
+  })
+  .refine((v) => new Date(v.arrival_at) > new Date(v.departure_at), {
+    message: "Arrival must be after departure",
+    path: ["arrival_at"],
+  })
 
 type Form = z.infer<typeof schema>
 
@@ -46,14 +51,16 @@ export function TripsAdmin() {
       return
     }
     const [t, r, v] = await Promise.all([
-      supabase.from("trips").select("id, departure_at, arrival_at, status, fare_from, routes(code)").order("departure_at"),
+      supabase.from("trips").select("id, route_id, vessel_id, departure_at, arrival_at, status, fare_from, routes(code)").order("departure_at"),
       supabase.from("routes").select("id, code").order("code"),
       supabase.from("vessels").select("id, code").order("code"),
     ])
     if (t.error) setError(t.error.message)
     else setRows(t.data ?? [])
-    if (!r.error) setRoutes(r.data ?? [])
-    if (!v.error) setVessels(v.data ?? [])
+    if (r.error) setError(r.error.message)
+    else setRoutes(r.data ?? [])
+    if (v.error) setError(v.error.message)
+    else setVessels(v.data ?? [])
     setLoading(false)
   }
 
@@ -81,7 +88,10 @@ export function TripsAdmin() {
   }
 
   const onSubmit = async (v: Form) => {
-    if (!supabase) return
+    if (!supabase) {
+      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      return
+    }
     const route = routes.find((r) => r.id === v.route_id)
     if (!route && !editing) {
       setError("Select a route.")
@@ -102,7 +112,13 @@ export function TripsAdmin() {
         arrival_port_id: full?.destination_port_id,
       })
     } else {
-      Object.assign(payload, { route_id: v.route_id, vessel_id: v.vessel_id })
+      const { data: full } = await supabase.from("routes").select("origin_port_id, destination_port_id").eq("id", v.route_id).single()
+      Object.assign(payload, {
+        route_id: v.route_id,
+        vessel_id: v.vessel_id,
+        departure_port_id: full?.origin_port_id,
+        arrival_port_id: full?.destination_port_id,
+      })
     }
     const { error } = editing
       ? await supabase.from("trips").update(payload).eq("id", editing.id)
@@ -117,7 +133,10 @@ export function TripsAdmin() {
 
   async function onDelete(row: any) {
     if (!window.confirm("Delete this trip?")) return
-    if (!supabase) return
+    if (!supabase) {
+      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      return
+    }
     const { error } = await supabase.from("trips").delete().eq("id", row.id)
     if (error) setError(error.message)
     else load()

@@ -59,7 +59,10 @@ export function PortsAdmin() {
   }
 
   const onSubmit = async (v: Form) => {
-    if (!supabase) return
+    if (!supabase) {
+      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      return
+    }
     const payload = { code: v.code.toUpperCase(), name: v.name, city: v.city, province: v.province || null, country: v.country || "Philippines" }
     const { error } = editing
       ? await supabase.from("ports").update(payload).eq("id", editing.id)
@@ -74,7 +77,10 @@ export function PortsAdmin() {
 
   async function onDelete(row: any) {
     if (!window.confirm(`Delete port ${row.code}?`)) return
-    if (!supabase) return
+    if (!supabase) {
+      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      return
+    }
     const { error } = await supabase.from("ports").delete().eq("id", row.id)
     if (error) setError(error.message)
     else load()

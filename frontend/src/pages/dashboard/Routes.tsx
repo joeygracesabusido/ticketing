@@ -48,7 +48,8 @@ export function RoutesAdmin() {
     ])
     if (r.error) setError(r.error.message)
     else setRows(r.data ?? [])
-    if (!p.error) setPorts(p.data ?? [])
+    if (p.error) setError(p.error.message)
+    else setPorts(p.data ?? [])
     setLoading(false)
   }
 
@@ -75,7 +76,10 @@ export function RoutesAdmin() {
   }
 
   const onSubmit = async (v: Form) => {
-    if (!supabase) return
+    if (!supabase) {
+      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      return
+    }
     const payload = {
       code: v.code.toUpperCase(),
       origin_port_id: v.origin_port_id,
@@ -96,7 +100,10 @@ export function RoutesAdmin() {
 
   async function onDelete(row: any) {
     if (!window.confirm(`Delete route ${row.code}?`)) return
-    if (!supabase) return
+    if (!supabase) {
+      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      return
+    }
     const { error } = await supabase.from("routes").delete().eq("id", row.id)
     if (error) setError(error.message)
     else load()

@@ -7,7 +7,7 @@ export function RequireAdmin() {
   const location = useLocation()
   if (loading) return <p className="container mx-auto px-4 py-12 text-sm text-muted-foreground">Loading...</p>
   if (!session) return <Navigate to="/login" state={{ from: location.pathname }} replace />
-  if (!isAdmin(role)) return <Navigate to="/" replace />
+  if (!isAdmin(role)) return <Navigate to="/" state={{ notice: "Admins only" }} replace />
   return <Outlet />
 }
 

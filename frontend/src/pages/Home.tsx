@@ -1,13 +1,16 @@
+import { useLocation } from "react-router-dom"
 import { SearchWidget } from "@/components/booking/SearchWidget"
 import { Header } from "@/components/layout/Header"
 import { Ship } from "lucide-react"
 
 export function Home() {
+  const notice = (useLocation().state as { notice?: string } | null)?.notice
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main>
         <section className="bg-gradient-to-b from-primary/10 to-background py-12 md:py-20">
+          {notice && <p className="text-sm text-muted-foreground text-center">{notice}</p>}
           <div className="container mx-auto px-4 text-center space-y-4 mb-8">
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm text-primary">
               <Ship className="h-4 w-4" />

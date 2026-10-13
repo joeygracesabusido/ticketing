@@ -21,20 +21,29 @@ export function useAuth(): AuthState {
     }
     let cancelled = false
     async function load(s: Session | null) {
-      if (cancelled) return
-      setSession(s)
-      if (!s?.user) {
-        setRole(null)
+      try {
+        if (cancelled) return
+        setSession(s)
+        if (!s?.user) {
+          setRole(null)
+          setLoading(false)
+          return
+        }
+        const { data } = await supabase!.from("profiles").select("role").eq("id", s.user.id).single()
+        if (cancelled) return
+        setRole((data?.role as Role) ?? null)
         setLoading(false)
-        return
+      } finally {
+        setLoading(false)
       }
-      const { data } = await supabase!.from("profiles").select("role").eq("id", s.user.id).single()
-      if (cancelled) return
-      setRole((data?.role as Role) ?? null)
-      setLoading(false)
     }
-    supabase.auth.getSession().then(({ data }) => load(data.session))
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => load(s))
+    supabase.auth
+      .getSession()
+      .then(({ data }) => load(data.session))
+      .catch(() => setLoading(false))
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      load(s).catch(() => setLoading(false))
+    })
     return () => {
       cancelled = true
       sub.subscription.unsubscribe()
