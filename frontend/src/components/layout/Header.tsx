@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom"
 import { Ship } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/hooks/useAuth"
+import { isAdmin } from "@/lib/roles"
 
 export function Header() {
+  const { role } = useAuth()
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -17,6 +20,11 @@ export function Header() {
           <Link to="/trips" className="text-sm font-medium hover:text-primary transition-colors px-3 py-2">
             Trips
           </Link>
+          {isAdmin(role) && (
+            <Link to="/dashboard" className="text-sm font-medium hover:text-primary transition-colors px-3 py-2">
+              Dashboard
+            </Link>
+          )}
           <Link to="/login">
             <Button variant="ghost" size="sm">
               Login
