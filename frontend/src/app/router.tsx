@@ -7,6 +7,7 @@ import Register from "@/pages/Register"
 import RequireAdmin from "@/components/auth/RequireAdmin"
 import DashboardLayout from "@/app/DashboardLayout"
 import Overview from "@/pages/dashboard/Overview"
+import PortsAdmin from "@/pages/dashboard/Ports"
 
 export const router = createBrowserRouter([
   { path: "/", element: <Home /> },
@@ -22,7 +23,7 @@ export const router = createBrowserRouter([
         element: <DashboardLayout />,
         children: [
           { index: true, element: <Overview /> },
-          { path: "ports", element: <Overview /> },
+          { path: "ports", element: <PortsAdmin /> },
           { path: "vessels", element: <Overview /> },
           { path: "routes", element: <Overview /> },
           { path: "trips", element: <Overview /> },
