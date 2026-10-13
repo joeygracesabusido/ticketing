@@ -5,6 +5,7 @@ import { AdminTable } from "./AdminTable"
 
 describe("AdminTable", () => {
   it("renders rows and fires edit/delete", () => {
+    const onAdd = vi.fn()
     const onEdit = vi.fn()
     const onDelete = vi.fn()
     render(
@@ -12,6 +13,7 @@ describe("AdminTable", () => {
         title="Ports"
         columns={[{ key: "code", label: "Code" }]}
         rows={[{ id: "1", code: "MNL" }]}
+        onAdd={onAdd}
         onEdit={onEdit}
         onDelete={onDelete}
       />
