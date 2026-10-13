@@ -104,7 +104,11 @@ export function TripsAdmin() {
       fare_from: v.fare_from ?? null,
     }
     if (!editing) {
-      const { data: full } = await supabase.from("routes").select("origin_port_id, destination_port_id").eq("id", v.route_id).single()
+      const { data: full, error: routeError } = await supabase.from("routes").select("origin_port_id, destination_port_id").eq("id", v.route_id).single()
+      if (routeError || !full) {
+        setError(routeError?.message ?? "Could not load route ports.")
+        return
+      }
       Object.assign(payload, {
         route_id: v.route_id,
         vessel_id: v.vessel_id,
@@ -112,7 +116,11 @@ export function TripsAdmin() {
         arrival_port_id: full?.destination_port_id,
       })
     } else {
-      const { data: full } = await supabase.from("routes").select("origin_port_id, destination_port_id").eq("id", v.route_id).single()
+      const { data: full, error: routeError } = await supabase.from("routes").select("origin_port_id, destination_port_id").eq("id", v.route_id).single()
+      if (routeError || !full) {
+        setError(routeError?.message ?? "Could not load route ports.")
+        return
+      }
       Object.assign(payload, {
         route_id: v.route_id,
         vessel_id: v.vessel_id,
