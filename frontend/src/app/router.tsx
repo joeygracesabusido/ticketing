@@ -4,6 +4,9 @@ import Trips from "@/pages/Trips"
 import TripDetails from "@/pages/TripDetails"
 import Login from "@/pages/Login"
 import Register from "@/pages/Register"
+import RequireAdmin from "@/components/auth/RequireAdmin"
+import DashboardLayout from "@/app/DashboardLayout"
+import Overview from "@/pages/dashboard/Overview"
 
 export const router = createBrowserRouter([
   { path: "/", element: <Home /> },
@@ -11,4 +14,20 @@ export const router = createBrowserRouter([
   { path: "/trips/:id", element: <TripDetails /> },
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
+  {
+    path: "/dashboard",
+    element: <RequireAdmin />,
+    children: [
+      {
+        element: <DashboardLayout />,
+        children: [
+          { index: true, element: <Overview /> },
+          { path: "ports", element: <Overview /> },
+          { path: "vessels", element: <Overview /> },
+          { path: "routes", element: <Overview /> },
+          { path: "trips", element: <Overview /> },
+        ],
+      },
+    ],
+  },
 ])
