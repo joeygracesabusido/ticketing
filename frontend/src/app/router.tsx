@@ -10,6 +10,7 @@ import Overview from "@/pages/dashboard/Overview"
 import PortsAdmin from "@/pages/dashboard/Ports"
 import VesselsAdmin from "@/pages/dashboard/Vessels"
 import RoutesAdmin from "@/pages/dashboard/Routes"
+import TripsAdmin from "@/pages/dashboard/Trips"
 
 export const router = createBrowserRouter([
   { path: "/", element: <Home /> },
@@ -28,7 +29,7 @@ export const router = createBrowserRouter([
           { path: "ports", element: <PortsAdmin /> },
           { path: "vessels", element: <VesselsAdmin /> },
           { path: "routes", element: <RoutesAdmin /> },
-          { path: "trips", element: <Overview /> },
+          { path: "trips", element: <TripsAdmin /> },
         ],
       },
     ],
