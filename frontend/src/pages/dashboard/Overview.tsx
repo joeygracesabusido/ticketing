@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Ship, Anchor, Route as RouteIcon, CalendarDays, ArrowRight, Plus } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/hooks/useAuth"
+import { isAdmin } from "@/lib/roles"
 
 type UpcomingTrip = {
   id: string
@@ -18,13 +20,15 @@ type UpcomingTrip = {
 }
 
 const STATS = [
-  { key: "ports", label: "Ports", icon: Anchor },
-  { key: "vessels", label: "Vessels", icon: Ship },
-  { key: "routes", label: "Routes", icon: RouteIcon },
-  { key: "trips", label: "Trips", icon: CalendarDays },
+  { key: "ports", label: "Ports", icon: Anchor, accent: "text-sky-600" },
+  { key: "vessels", label: "Vessels", icon: Ship, accent: "text-emerald-600" },
+  { key: "routes", label: "Routes", icon: RouteIcon, accent: "text-violet-600" },
+  { key: "trips", label: "Trips", icon: CalendarDays, accent: "text-amber-600" },
 ]
 
 export function Overview() {
+  const { role } = useAuth()
+  const admin = isAdmin(role) || role === null // default to admin view while role loads
   const [counts, setCounts] = React.useState<Record<string, number | null>>({})
   const [upcoming, setUpcoming] = React.useState<UpcomingTrip[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -101,15 +105,12 @@ export function Overview() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-5 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })} · ferry operations at a glance
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary via-blue-600 to-violet-600 bg-clip-text text-transparent">{admin ? "Dashboard" : "Operations"}</h1>
         </div>
         <Link to="/dashboard/trips">
-          <Button className="gap-2">
+          <Button className="gap-2 shadow-sm bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90">
             <Plus className="h-4 w-4" /> New trip
           </Button>
         </Link>
@@ -119,25 +120,27 @@ export function Overview() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {STATS.map((s) => (
-          <Card key={s.key}>
+          <Link key={s.key} to={`/dashboard/${s.key}`} className="block rounded-lg transition-shadow hover:shadow-md">
+          <Card className="h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
-              <s.icon className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className={`text-sm font-medium ${s.accent}`}>{s.label}</CardTitle>
+              <s.icon className={`h-4 w-4 ${s.accent}`} />
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{loading ? "--" : (counts[s.key] ?? "--")}</p>
-              <Link to={`/dashboard/${s.key}`} className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1">
+              <p className={`text-3xl font-bold ${s.accent}`}>{loading ? "--" : (counts[s.key] ?? "--")}</p>
+              <span className="text-xs text-primary inline-flex items-center gap-1 mt-1">
                 Manage <ArrowRight className="h-3 w-3" />
-              </Link>
+              </span>
             </CardContent>
           </Card>
+          </Link>
         ))}
       </div>
 
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Upcoming departures</CardTitle>
-          <CardDescription>Next 5 scheduled trips across all routes</CardDescription>
+          <CardTitle className="bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">{admin ? "Upcoming departures" : "Today's operations"}</CardTitle>
+          <CardDescription>{admin ? "Next 5 scheduled trips across all routes" : "Next departures — today first"}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading && <p className="text-sm text-muted-foreground px-6 py-4">Loading...</p>}

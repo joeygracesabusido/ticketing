@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Pencil, Trash2 } from "lucide-react"
 
 export type AdminColumn = {
   key: string
@@ -21,8 +22,8 @@ export function AdminTable(props: {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{title}</h1>
-        <Button onClick={onAdd}>Add</Button>
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-blue-600 to-violet-600 bg-clip-text text-transparent">{title}</h1>
+        <Button onClick={onAdd} className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90">Add</Button>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {loading && <p className="text-sm text-muted-foreground">Loading...</p>}
@@ -55,12 +56,12 @@ export function AdminTable(props: {
                         {c.render ? c.render(r) : String(r[c.key] ?? "--")}
                       </td>
                     ))}
-                    <td className="px-4 py-2 text-right space-x-2">
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(r)}>
-                        Edit
+                    <td className="px-4 py-2 text-right space-x-1">
+                      <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => onEdit(r)}>
+                        <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onDelete(r)}>
-                        Delete
+                      <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => onDelete(r)}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </td>
                   </tr>

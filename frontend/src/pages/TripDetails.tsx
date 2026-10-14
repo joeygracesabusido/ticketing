@@ -1,18 +1,42 @@
 import * as React from "react"
 import { useParams, Link } from "react-router-dom"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
 import { Header } from "@/components/layout/Header"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { format } from "date-fns"
 import { ArrowLeft, Ship, Clock, MapPin } from "lucide-react"
+
+const bookingSchema = z.object({
+  fullName: z.string().min(2, "Enter your full name"),
+  email: z.string().email("Enter a valid email"),
+  phone: z.string().min(7, "Enter a valid phone number"),
+  passengers: z.coerce.number().int().min(1, "At least 1 passenger").max(100, "Max 100 per booking"),
+})
+
+type BookingForm = z.infer<typeof bookingSchema>
+
+const fmtPeso = new Intl.NumberFormat("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export function TripDetails() {
   const { id } = useParams<{ id: string }>()
   const [trip, setTrip] = React.useState<any | null>(null)
   const [loading, setLoading] = React.useState(Boolean(id))
   const [error, setError] = React.useState<string | null>(null)
+  const [bookingError, setBookingError] = React.useState<string | null>(null)
+  const [confirmation, setConfirmation] = React.useState<(BookingForm & { reference: string; total: number | null }) | null>(null)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<BookingForm>({ resolver: zodResolver(bookingSchema), defaultValues: { passengers: 1 } })
 
   React.useEffect(() => {
     if (!id) return
@@ -158,17 +182,91 @@ export function TripDetails() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Booking Summary</CardTitle>
+                  <CardTitle className="text-lg">Book this trip</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Fare from</span>
-                    <span className="font-bold">₱{trip.fareFrom ? Number(trip.fareFrom).toLocaleString() : "--"}</span>
+                    <span className="font-bold">₱{trip.fareFrom ? fmtPeso.format(Number(trip.fareFrom)) : "--"}</span>
                   </div>
-                  <Button className="w-full" disabled>
-                    Continue to Booking (coming soon)
-                  </Button>
-                  <p className="text-xs text-muted-foreground text-center">Booking flow implemented in next phase</p>
+                  {(() => {
+                    const now = Date.now()
+                    if (trip.status === "cancelled") return <p className="text-sm text-destructive">This trip is cancelled.</p>
+                    if (trip.bookingOpen && new Date(trip.bookingOpen).getTime() > now)
+                      return <p className="text-sm text-muted-foreground">Booking opens {format(new Date(trip.bookingOpen), "PPp")}.</p>
+                    if (trip.bookingClose && new Date(trip.bookingClose).getTime() < now)
+                      return <p className="text-sm text-destructive">Booking is closed for this trip.</p>
+                    return null
+                  })()}
+                  {(() => {
+                    const now = Date.now()
+                    const closed =
+                      trip.status === "cancelled" ||
+                      (trip.bookingOpen && new Date(trip.bookingOpen).getTime() > now) ||
+                      (trip.bookingClose && new Date(trip.bookingClose).getTime() < now)
+                    if (closed) return null
+                    // shortcut: confirmation is local-only, persist to a bookings table when it exists
+                    if (confirmation)
+                      return (
+                        <div className="space-y-3 rounded-xl bg-muted p-4 text-sm">
+                          <p className="font-bold">Booking reserved ({confirmation.reference})</p>
+                          <p className="text-muted-foreground">
+                            {confirmation.fullName} · {confirmation.passengers} passenger{confirmation.passengers > 1 ? "s" : ""}
+                          </p>
+                          <p className="text-muted-foreground">{confirmation.email} · {confirmation.phone}</p>
+                          <div className="flex justify-between font-bold">
+                            <span>Total</span>
+                            <span>₱{confirmation.total !== null ? fmtPeso.format(confirmation.total) : "--"}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Show this reference at the port. Not yet saved online.</p>
+                          <Button variant="outline" className="w-full" onClick={() => { setConfirmation(null); reset() }}>
+                            New booking
+                          </Button>
+                        </div>
+                      )
+                    return (
+                      <form
+                        onSubmit={handleSubmit((v) => {
+                          setBookingError(null)
+                          if (trip.vessel?.capacity && v.passengers > trip.vessel.capacity) {
+                            setBookingError(`Only ${trip.vessel.capacity} seats on this vessel.`)
+                            return
+                          }
+                          setConfirmation({
+                            ...v,
+                            reference: `BK-${Date.now().toString(36).toUpperCase()}`,
+                            total: trip.fareFrom ? Number(trip.fareFrom) * v.passengers : null,
+                          })
+                        })}
+                        className="space-y-3"
+                      >
+                        <div className="space-y-1.5">
+                          <Label htmlFor="fullName">Full name</Label>
+                          <Input id="fullName" placeholder="Juan Dela Cruz" {...register("fullName")} />
+                          {errors.fullName && <p className="text-xs text-destructive">{errors.fullName.message}</p>}
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="email">Email</Label>
+                          <Input id="email" type="email" placeholder="you@example.com" {...register("email")} />
+                          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="phone">Phone</Label>
+                          <Input id="phone" placeholder="0917 123 4567" {...register("phone")} />
+                          {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="passengers">Passengers</Label>
+                          <Input id="passengers" type="number" min={1} max={100} {...register("passengers")} />
+                          {errors.passengers && <p className="text-xs text-destructive">{errors.passengers.message}</p>}
+                        </div>
+                        {bookingError && <p className="text-xs text-destructive">{bookingError}</p>}
+                        <Button className="w-full" disabled={isSubmitting}>
+                          {isSubmitting ? "Reserving..." : "Reserve seats"}
+                        </Button>
+                      </form>
+                    )
+                  })()}
                 </CardContent>
               </Card>
             </div>

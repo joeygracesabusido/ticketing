@@ -3,7 +3,7 @@ import { Ship } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
 import { useLogout } from "@/hooks/useLogout"
-import { isAdmin } from "@/lib/roles"
+import { canAccessDashboard } from "@/lib/roles"
 
 export function Header() {
   const { session, role } = useAuth()
@@ -22,7 +22,7 @@ export function Header() {
           <Link to="/trips" className="text-sm font-medium hover:text-primary transition-colors px-3 py-2">
             Trips
           </Link>
-          {isAdmin(role) && (
+          {canAccessDashboard(role) && (
             <Link to="/dashboard" className="text-sm font-medium hover:text-primary transition-colors px-3 py-2">
               Dashboard
             </Link>

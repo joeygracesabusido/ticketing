@@ -11,6 +11,7 @@ import PortsAdmin from "@/pages/dashboard/Ports"
 import VesselsAdmin from "@/pages/dashboard/Vessels"
 import RoutesAdmin from "@/pages/dashboard/Routes"
 import TripsAdmin from "@/pages/dashboard/Trips"
+import Reports from "@/pages/dashboard/Reports"
 
 export const router = createBrowserRouter([
   { path: "/", element: <Home /> },
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
           { path: "vessels", element: <VesselsAdmin /> },
           { path: "routes", element: <RoutesAdmin /> },
           { path: "trips", element: <TripsAdmin /> },
+          { path: "reports", element: <Reports /> },
         ],
       },
     ],

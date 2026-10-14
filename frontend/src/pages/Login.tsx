@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Link, useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
+import { canAccessDashboard } from "@/lib/roles"
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -32,12 +33,13 @@ export function Login() {
       setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
       return
     }
-    const { error } = await supabase.auth.signInWithPassword(values)
+    const { data, error } = await supabase.auth.signInWithPassword(values)
     if (error) {
       setError(error.message)
       return
     }
-    navigate("/")
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single()
+    navigate(canAccessDashboard(profile?.role) ? "/dashboard" : "/")
   }
 
   return (

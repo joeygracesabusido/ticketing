@@ -19,8 +19,8 @@ describe("AdminTable", () => {
       />
     )
     expect(screen.getByText("MNL")).toBeTruthy()
-    fireEvent.click(screen.getByText("Edit"))
-    fireEvent.click(screen.getByText("Delete"))
+    fireEvent.click(screen.getByLabelText("Edit"))
+    fireEvent.click(screen.getByLabelText("Delete"))
     expect(onEdit).toHaveBeenCalledTimes(1)
     expect(onDelete).toHaveBeenCalledTimes(1)
   })

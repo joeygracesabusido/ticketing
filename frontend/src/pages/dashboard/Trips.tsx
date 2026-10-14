@@ -158,7 +158,16 @@ export function TripsAdmin() {
           { key: "departure_at", label: "Departure", render: (r) => new Date(r.departure_at).toLocaleString() },
           { key: "arrival_at", label: "Arrival", render: (r) => new Date(r.arrival_at).toLocaleString() },
           { key: "status", label: "Status" },
-          { key: "fare_from", label: "Fare" },
+          {
+            key: "fare_from",
+            label: "Fare",
+            render: (r) =>
+              r.fare_from === null || r.fare_from === undefined || Number.isNaN(Number(r.fare_from))
+                ? "--"
+                : new Intl.NumberFormat("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+                    Number(r.fare_from)
+                  ),
+          },
         ]}
         rows={rows}
         loading={loading}
