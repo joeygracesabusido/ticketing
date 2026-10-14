@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Ship, Anchor, Route as RouteIcon, CalendarDays, ArrowRight, Plus } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { supabase, missingSupabaseEnvMessage } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
 import { isAdmin } from "@/lib/roles"
 
@@ -36,7 +36,7 @@ export function Overview() {
 
   React.useEffect(() => {
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       setLoading(false)
       return
     }

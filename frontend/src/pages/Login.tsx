@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Link, useNavigate } from "react-router-dom"
-import { supabase } from "@/lib/supabase"
+import { supabase, missingSupabaseEnvMessage } from "@/lib/supabase"
 import { canAccessDashboard } from "@/lib/roles"
 
 const loginSchema = z.object({
@@ -30,7 +30,7 @@ export function Login() {
   const onSubmit = async (values: LoginForm) => {
     setError(null)
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       return
     }
     const { data, error } = await supabase.auth.signInWithPassword(values)

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { supabase } from "@/lib/supabase"
+import { supabase, missingSupabaseEnvMessage } from "@/lib/supabase"
 import { AdminTable } from "@/components/admin/AdminTable"
 
 const schema = z
@@ -38,7 +38,7 @@ export function RoutesAdmin() {
     setLoading(true)
     setError(null)
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       setLoading(false)
       return
     }
@@ -77,7 +77,7 @@ export function RoutesAdmin() {
 
   const onSubmit = async (v: Form) => {
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       return
     }
     const payload = {
@@ -101,7 +101,7 @@ export function RoutesAdmin() {
   async function onDelete(row: any) {
     if (!window.confirm(`Delete route ${row.code}?`)) return
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       return
     }
     const { error } = await supabase.from("routes").delete().eq("id", row.id)

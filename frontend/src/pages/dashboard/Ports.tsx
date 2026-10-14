@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { supabase } from "@/lib/supabase"
+import { supabase, missingSupabaseEnvMessage } from "@/lib/supabase"
 import { AdminTable } from "@/components/admin/AdminTable"
 
 const schema = z.object({
@@ -32,7 +32,7 @@ export function PortsAdmin() {
     setLoading(true)
     setError(null)
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       setLoading(false)
       return
     }
@@ -60,7 +60,7 @@ export function PortsAdmin() {
 
   const onSubmit = async (v: Form) => {
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       return
     }
     const payload = { code: v.code.toUpperCase(), name: v.name, city: v.city, province: v.province || null, country: v.country || "Philippines" }
@@ -78,7 +78,7 @@ export function PortsAdmin() {
   async function onDelete(row: any) {
     if (!window.confirm(`Delete port ${row.code}?`)) return
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       return
     }
     const { error } = await supabase.from("ports").delete().eq("id", row.id)

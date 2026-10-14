@@ -2,7 +2,7 @@ import * as React from "react"
 import { useSearchParams } from "react-router-dom"
 import { Header } from "@/components/layout/Header"
 import { TripCard } from "@/components/trips/TripCard"
-import { supabase } from "@/lib/supabase"
+import { supabase, missingSupabaseEnvMessage } from "@/lib/supabase"
 import { Card, CardContent } from "@/components/ui/card"
 import { SearchWidget } from "@/components/booking/SearchWidget"
 
@@ -31,7 +31,7 @@ export function Trips() {
   React.useEffect(() => {
     if (!shouldQuery || !origin || !destination || !date) return
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       return
     }
     let cancelled = false

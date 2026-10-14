@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { supabase } from "@/lib/supabase"
+import { supabase, missingSupabaseEnvMessage } from "@/lib/supabase"
 import { AdminTable } from "@/components/admin/AdminTable"
 
 const schema = z.object({
@@ -31,7 +31,7 @@ export function VesselsAdmin() {
     setLoading(true)
     setError(null)
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       setLoading(false)
       return
     }
@@ -59,7 +59,7 @@ export function VesselsAdmin() {
 
   const onSubmit = async (v: Form) => {
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       return
     }
     const payload = { code: v.code.toUpperCase(), name: v.name, capacity: v.capacity ?? null, status: v.status || "active" }
@@ -77,7 +77,7 @@ export function VesselsAdmin() {
   async function onDelete(row: any) {
     if (!window.confirm(`Delete vessel ${row.code}?`)) return
     if (!supabase) {
-      setError("Missing Supabase env (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).")
+      setError(missingSupabaseEnvMessage)
       return
     }
     const { error } = await supabase.from("vessels").delete().eq("id", row.id)
