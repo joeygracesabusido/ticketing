@@ -1,13 +1,14 @@
 import { NavLink, Outlet } from "react-router-dom"
-import { LayoutDashboard, Anchor, Ship, Route as RouteIcon, CalendarDays, BarChart3, LogOut, BedDouble, Ticket } from "lucide-react"
+import { LayoutDashboard, Anchor, Ship, Route as RouteIcon, CalendarDays, BarChart3, LogOut, BedDouble, Ticket, Users } from "lucide-react"
 import { Header } from "@/components/layout/Header"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
 import { useLogout } from "@/hooks/useLogout"
 import { isAdmin } from "@/lib/roles"
 import { cn } from "@/lib/utils"
 
-const links = [
+const links: { to: string; label: string; icon: any; end?: boolean }[] = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/dashboard/ports", label: "Ports", icon: Anchor },
   { to: "/dashboard/vessels", label: "Vessels", icon: Ship },
@@ -18,10 +19,13 @@ const links = [
   { to: "/dashboard/reports", label: "Reports", icon: BarChart3 },
 ]
 
+const adminLinks: { to: string; label: string; icon: any; end?: boolean }[] = [{ to: "/dashboard/users", label: "Users", icon: Users }]
+
 export function DashboardLayout() {
   const logout = useLogout()
   const { session, role } = useAuth()
   const admin = isAdmin(role)
+  const navLinks = admin ? [...links.slice(0, 7), ...adminLinks, ...links.slice(7)] : links
   return (
     <div className="min-h-screen bg-muted/40">
       <Header />
@@ -40,20 +44,27 @@ export function DashboardLayout() {
             <p className="hidden md:block px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Manage
             </p>
-            {links.map((l) => (
+            {navLinks.map((l) => (
               <NavLink
                 key={l.to}
                 to={l.to}
                 end={l.end}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors",
-                    isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors",
+                    isActive ? "bg-primary/10 font-semibold text-primary" : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
                   )
                 }
               >
-                <l.icon className="h-4 w-4 shrink-0" />
-                {l.label}
+                {({ isActive }) => (
+                  <>
+                    {isActive && (
+                      <span aria-hidden className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-primary to-violet-600" />
+                    )}
+                    <l.icon className="h-4 w-4 shrink-0" />
+                    {l.label}
+                  </>
+                )}
               </NavLink>
             ))}
             <div className="hidden md:block mt-2 rounded-xl bg-muted p-3">
@@ -62,13 +73,15 @@ export function DashboardLayout() {
                 <Badge variant="secondary" className="text-[11px]">
                   {admin ? "Admin" : "Staff"}
                 </Badge>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Logout"
                   onClick={logout}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+                  className="h-7 w-7 text-muted-foreground hover:text-primary"
                 >
                   <LogOut className="h-3.5 w-3.5" />
-                  Logout
-                </button>
+                </Button>
               </div>
             </div>
             <button
