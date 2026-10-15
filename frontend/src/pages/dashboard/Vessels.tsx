@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { supabase, missingSupabaseEnvMessage } from "@/lib/supabase"
-import { AdminTable } from "@/components/admin/AdminTable"
+import { AdminTable, StatusBadge } from "@/components/admin/AdminTable"
 
 const schema = z.object({
   code: z.string().min(1).max(16),
@@ -93,7 +93,7 @@ export function VesselsAdmin() {
           { key: "code", label: "Code" },
           { key: "name", label: "Name" },
           { key: "capacity", label: "Capacity" },
-          { key: "status", label: "Status" },
+          { key: "status", label: "Status", render: (r) => <StatusBadge value={r.status} /> },
         ]}
         rows={rows}
         loading={loading}

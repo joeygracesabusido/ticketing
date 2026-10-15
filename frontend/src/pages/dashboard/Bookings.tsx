@@ -2,8 +2,7 @@ import * as React from "react"
 import { supabase, missingSupabaseEnvMessage } from "@/lib/supabase"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { AdminTable } from "@/components/admin/AdminTable"
+import { AdminTable, StatusBadge } from "@/components/admin/AdminTable"
 import { formatPeso } from "@/lib/fare"
 
 // Admin: verify pending payments (ONLY path to paid) + expire holds.
@@ -51,9 +50,8 @@ export function BookingsAdmin() {
         { key: "payment_reference", label: "Ref" },
         { key: "amount", label: "Amount", render: (r) => `₱${formatPeso(Number(r.amount))}` },
         { key: "method", label: "Method" },
-        { key: "status", label: "Status", render: (r) => <Badge>{r.status}</Badge> },
-      ]} rows={payments} loading={loading} error={null}
-        onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
+        { key: "status", label: "Status", render: (r) => <StatusBadge value={r.status} /> },
+      ]} rows={payments} loading={loading} error={null} />
       <div className="space-y-2">
         {payments.filter((p) => p.status === "pending" || p.status === "processing").map((p) => (
           <Card key={p.id}><CardContent className="p-4 flex flex-wrap items-center gap-2 text-sm">
@@ -69,9 +67,8 @@ export function BookingsAdmin() {
         { key: "booking_reference", label: "Ref" },
         { key: "pax_count", label: "Pax" },
         { key: "total_amount", label: "Total", render: (r) => `₱${formatPeso(Number(r.total_amount))}` },
-        { key: "status", label: "Status", render: (r) => <Badge>{r.status}</Badge> },
-      ]} rows={bookings} loading={loading} error={null}
-        onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
+        { key: "status", label: "Status", render: (r) => <StatusBadge value={r.status} /> },
+      ]} rows={bookings} loading={loading} error={null} />
       <p className="text-xs text-muted-foreground">No payment gateway connected. Configure provider (e.g. PayMongo/GCash/Xendit) webhook → call verify_payment() with service_role after funds confirm. Never mark paid on button click alone.</p>
     </div>
   )

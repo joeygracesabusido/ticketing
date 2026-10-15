@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { supabase, missingSupabaseEnvMessage } from "@/lib/supabase"
-import { AdminTable } from "@/components/admin/AdminTable"
+import { AdminTable, StatusBadge } from "@/components/admin/AdminTable"
 
 const schema = z
   .object({
@@ -157,7 +157,7 @@ export function TripsAdmin() {
         columns={[
           { key: "departure_at", label: "Departure", render: (r) => new Date(r.departure_at).toLocaleString() },
           { key: "arrival_at", label: "Arrival", render: (r) => new Date(r.arrival_at).toLocaleString() },
-          { key: "status", label: "Status" },
+          { key: "status", label: "Status", render: (r) => <StatusBadge value={r.status} /> },
           {
             key: "fare_from",
             label: "Fare",

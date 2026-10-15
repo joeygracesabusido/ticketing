@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { supabase, missingSupabaseEnvMessage } from "@/lib/supabase"
-import { AdminTable } from "@/components/admin/AdminTable"
+import { AdminTable, StatusBadge } from "@/components/admin/AdminTable"
 
 const schema = z.object({
   vessel_id: z.string().min(1, "Select vessel"),
@@ -28,6 +28,7 @@ export function AccommodationsAdmin() {
   const [error, setError] = React.useState<string | null>(null)
   const [editing, setEditing] = React.useState<any | null>(null)
   const [showForm, setShowForm] = React.useState(false)
+  const [query, setQuery] = React.useState("")
   const { register, handleSubmit, reset } = useForm<Form>({ resolver: zodResolver(schema) })
 
   async function load() {
@@ -42,6 +43,18 @@ export function AccommodationsAdmin() {
     setLoading(false)
   }
   React.useEffect(() => { load() }, [])
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter((r) =>
+      [r.code, r.name, String(r.capacity ?? ""), String(r.fare_amount ?? ""), String(r.is_active), r.vessels?.code, r.vessels?.name]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
+    )
+  }, [rows, query])
 
   const onSubmit = async (f: Form) => {
     if (!supabase) return
@@ -74,11 +87,13 @@ export function AccommodationsAdmin() {
 
   return (
     <div className="space-y-4">
+      <Input placeholder="Search code, name, vessel…" value={query} onChange={(e) => setQuery(e.target.value)} className="max-w-sm" />
       <AdminTable title="Accommodations (per vessel)" columns={[
         { key: "code", label: "Code" }, { key: "name", label: "Name" },
+        { key: "vessel", label: "Vessel", render: (r) => (r.vessels ? `${r.vessels.code} — ${r.vessels.name}` : "—") },
         { key: "capacity", label: "Capacity" }, { key: "fare_amount", label: "Fare (VAT-incl)" },
-        { key: "is_active", label: "Active", render: (r) => String(r.is_active) },
-      ]} rows={rows} loading={loading} error={error}
+        { key: "is_active", label: "Active", render: (r) => <StatusBadge value={r.is_active} /> },
+      ]} rows={filtered} loading={loading} error={error}
         onAdd={() => { setEditing(null); reset({ vessel_id: "", code: "", name: "", capacity: 50, fare_amount: 1200, is_active: "true" }); setShowForm(true) }}
         onEdit={(r) => { setEditing(r); reset({ vessel_id: r.vessel_id, code: r.code, name: r.name, capacity: r.capacity, fare_amount: Number(r.fare_amount), is_active: String(r.is_active) }); setShowForm(true) }}
         onDelete={onDelete} />
