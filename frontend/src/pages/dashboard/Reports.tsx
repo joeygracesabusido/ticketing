@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/admin/AdminTable"
 import { supabase, missingSupabaseEnvMessage } from "@/lib/supabase"
 
 type Row = {
@@ -162,7 +163,7 @@ export function Reports() {
                   <span className="ml-auto text-muted-foreground">
                     {new Date(r.departure_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                   </span>
-                  <Badge>{r.bookingState}</Badge>
+                  <StatusBadge value={r.bookingState} />
                 </li>
               ))}
             </ul>
