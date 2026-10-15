@@ -22,6 +22,9 @@ export function Header() {
           <Link to="/trips" className="text-sm font-medium hover:text-primary transition-colors px-3 py-2">
             Trips
           </Link>
+          <Link to="/bookings" className="text-sm font-medium hover:text-primary transition-colors px-3 py-2">
+            My bookings
+          </Link>
           {canAccessDashboard(role) && (
             <Link to="/dashboard" className="text-sm font-medium hover:text-primary transition-colors px-3 py-2">
               Dashboard

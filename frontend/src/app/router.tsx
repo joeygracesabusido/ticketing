@@ -11,12 +11,16 @@ import PortsAdmin from "@/pages/dashboard/Ports"
 import VesselsAdmin from "@/pages/dashboard/Vessels"
 import RoutesAdmin from "@/pages/dashboard/Routes"
 import TripsAdmin from "@/pages/dashboard/Trips"
+import AccommodationsAdmin from "@/pages/dashboard/Accommodations"
+import BookingsAdmin from "@/pages/dashboard/Bookings"
 import Reports from "@/pages/dashboard/Reports"
+import MyBookings from "@/pages/MyBookings"
 
 export const router = createBrowserRouter([
   { path: "/", element: <Home /> },
   { path: "/trips", element: <Trips /> },
   { path: "/trips/:id", element: <TripDetails /> },
+  { path: "/bookings", element: <MyBookings /> },
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
   {
@@ -31,6 +35,8 @@ export const router = createBrowserRouter([
           { path: "vessels", element: <VesselsAdmin /> },
           { path: "routes", element: <RoutesAdmin /> },
           { path: "trips", element: <TripsAdmin /> },
+          { path: "accommodations", element: <AccommodationsAdmin /> },
+          { path: "bookings", element: <BookingsAdmin /> },
           { path: "reports", element: <Reports /> },
         ],
       },

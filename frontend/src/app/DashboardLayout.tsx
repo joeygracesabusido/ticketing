@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom"
-import { LayoutDashboard, Anchor, Ship, Route as RouteIcon, CalendarDays, BarChart3, LogOut } from "lucide-react"
+import { LayoutDashboard, Anchor, Ship, Route as RouteIcon, CalendarDays, BarChart3, LogOut, BedDouble, Ticket } from "lucide-react"
 import { Header } from "@/components/layout/Header"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/useAuth"
@@ -13,6 +13,8 @@ const links = [
   { to: "/dashboard/vessels", label: "Vessels", icon: Ship },
   { to: "/dashboard/routes", label: "Routes", icon: RouteIcon },
   { to: "/dashboard/trips", label: "Trips", icon: CalendarDays },
+  { to: "/dashboard/accommodations", label: "Accommodations", icon: BedDouble },
+  { to: "/dashboard/bookings", label: "Bookings", icon: Ticket },
   { to: "/dashboard/reports", label: "Reports", icon: BarChart3 },
 ]
 

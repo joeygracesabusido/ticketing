@@ -21,3 +21,6 @@ postgres_data/
 .vscode/
 .idea/
 .DS_Store
+
+# graphify knowledge graph (local-only build output)
+graphify-out/
