@@ -31,4 +31,11 @@ describe("AdminTable", () => {
     render(<StatusBadge value="weird-new-value" />)
     expect(screen.getByText("Weird-new-value").className).toContain("primary")
   })
+
+  it("tints boolean active/inactive like their string equivalents", () => {
+    render(<StatusBadge value={true} />)
+    expect(screen.getByText("Active").className).toContain("emerald")
+    render(<StatusBadge value={false} />)
+    expect(screen.getByText("Inactive").className).toContain("rose")
+  })
 })

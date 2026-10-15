@@ -18,8 +18,9 @@ const STATUS_TINTS: [RegExp, string][] = [
 export function StatusBadge({ value }: { value: string | boolean }) {
   const raw = String(value).trim()
   const norm = raw.toLowerCase()
-  const label = norm === "true" ? "active" : norm === "false" ? "inactive" : raw.charAt(0).toUpperCase() + raw.slice(1)
-  const tint = STATUS_TINTS.find(([re]) => re.test(norm))?.[1] ?? "border-primary/20 bg-primary/5 text-primary"
+  const key = norm === "true" ? "active" : norm === "false" ? "inactive" : norm
+  const label = key.charAt(0).toUpperCase() + key.slice(1)
+  const tint = STATUS_TINTS.find(([re]) => re.test(key))?.[1] ?? "border-primary/20 bg-primary/5 text-primary"
   return <Badge variant="outline" className={tint}>{label}</Badge>
 }
 
