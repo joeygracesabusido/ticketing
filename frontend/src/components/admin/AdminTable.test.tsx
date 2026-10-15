@@ -38,4 +38,12 @@ describe("AdminTable", () => {
     render(<StatusBadge value={false} />)
     expect(screen.getByText("Inactive").className).toContain("rose")
   })
+
+  it("renders a neutral placeholder for missing values", () => {
+    const { unmount } = render(<StatusBadge value={null} />)
+    expect(screen.getByText("--").className).toContain("primary")
+    unmount()
+    render(<StatusBadge value="" />)
+    expect(screen.getByText("--").className).toContain("primary")
+  })
 })

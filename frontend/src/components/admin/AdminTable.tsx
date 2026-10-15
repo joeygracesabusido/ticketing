@@ -15,8 +15,9 @@ const STATUS_TINTS: [RegExp, string][] = [
   [/^(retired|cancelled|failed|closed|inactive)$/, "border-rose-200 bg-rose-50 text-rose-700"],
 ]
 
-export function StatusBadge({ value }: { value: string | boolean }) {
-  const raw = String(value).trim()
+export function StatusBadge({ value }: { value: string | boolean | null | undefined }) {
+  const raw = String(value ?? "").trim()
+  if (!raw) return <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">--</Badge>
   const norm = raw.toLowerCase()
   const key = norm === "true" ? "active" : norm === "false" ? "inactive" : norm
   const label = key.charAt(0).toUpperCase() + key.slice(1)
