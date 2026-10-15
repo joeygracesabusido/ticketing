@@ -10,7 +10,26 @@ export type CreateBookingArgs = {
   name: string
   email: string
   phone: string
+  // Full name per passenger, index 0 = booker. Omitted/null = legacy
+  // server behavior (booker name + 'Passenger 2..N').
+  passengerNames?: string[] | null
 };
+
+// Build the per-passenger array from the booker name + extra inputs.
+// Returns null for single-pax (no param needed). Pads/trims defensively;
+// the server re-validates count and each name.
+export function buildPassengerNames(fullName: string, pax: number, extra: string[]): string[] | null {
+  if (pax <= 1) return null
+  const names = [fullName.trim(), ...extra.slice(0, Math.max(0, pax - 1)).map((n) => (n ?? "").trim())]
+  while (names.length < pax) names.push("")
+  return names
+}
+
+// 0-based index of the first name shorter than 2 chars, or -1 when all valid.
+export function missingPassengerIndex(names: string[] | null | undefined): number {
+  if (!names) return -1
+  return names.findIndex((n) => (n ?? "").trim().length < 2)
+}
 
 export async function createBooking(a: CreateBookingArgs) {
   if (!supabase) throw new Error("Supabase not configured")
@@ -23,6 +42,7 @@ export async function createBooking(a: CreateBookingArgs) {
     p_email: a.email,
     p_phone: a.phone,
     p_idempotency: idempotency,
+    p_passenger_names: a.passengerNames ?? null,
   });
   if (error) throw new Error(error.message)
   return data as any

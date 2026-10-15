@@ -6,12 +6,14 @@ import type { Role } from "@/lib/roles"
 export type AuthState = {
   session: Session | null
   role: Role | null
+  isActive: boolean
   loading: boolean
 }
 
 export function useAuth(): AuthState {
   const [session, setSession] = React.useState<Session | null>(null)
   const [role, setRole] = React.useState<Role | null>(null)
+  const [isActive, setIsActive] = React.useState(true)
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
@@ -26,12 +28,16 @@ export function useAuth(): AuthState {
         setSession(s)
         if (!s?.user) {
           setRole(null)
+          setIsActive(true)
           setLoading(false)
           return
         }
-        const { data } = await supabase!.from("profiles").select("role").eq("id", s.user.id).single()
+        const { data } = await supabase!.from("profiles").select("role, is_active").eq("id", s.user.id).single()
         if (cancelled) return
-        setRole((data?.role as Role) ?? null)
+        const active = (data as any)?.is_active !== false
+        setIsActive(active)
+        // Inactive accounts lose their effective role so guards deny access.
+        setRole(active ? ((data as any)?.role as Role) ?? null : null)
         setLoading(false)
       } finally {
         setLoading(false)
@@ -50,5 +56,5 @@ export function useAuth(): AuthState {
     }
   }, [])
 
-  return { session, role, loading }
+  return { session, role, isActive, loading }
 }

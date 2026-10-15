@@ -14,7 +14,7 @@ import { Select } from "@/components/ui/select"
 import { format } from "date-fns"
 import { ArrowLeft, Ship, Clock, MapPin } from "lucide-react"
 import { computeFare, formatPeso } from "@/lib/fare"
-import { createBooking, createPaymentIntent, cancelBooking, msRemaining, formatCountdown, isExpired } from "@/lib/booking"
+import { createBooking, createPaymentIntent, cancelBooking, msRemaining, formatCountdown, isExpired, buildPassengerNames, missingPassengerIndex } from "@/lib/booking"
 import { TicketCard } from "@/components/booking/TicketCard"
 
 const bookingSchema = z.object({
@@ -47,6 +47,19 @@ export function TripDetails() {
   })
   const watchedAccom = watch("accommodationId")
   const watchedPax = watch("passengers")
+  const paxCount = Math.max(1, Number(watchedPax) || 1)
+
+  // Extra name inputs for passengers 2..N (passenger 1 = full name field).
+  const [extraNames, setExtraNames] = React.useState<string[]>([])
+  React.useEffect(() => {
+    setExtraNames((prev) => {
+      const need = Math.max(0, paxCount - 1)
+      if (prev.length === need) return prev
+      const next = prev.slice(0, need)
+      while (next.length < need) next.push("")
+      return next
+    })
+  }, [paxCount])
 
   // countdown ticker
   React.useEffect(() => {
@@ -113,9 +126,12 @@ export function TripDetails() {
   const onReserve = async (v: BookingForm) => {
     setBookingError(null); setPlacing(true)
     try {
+      const names = buildPassengerNames(v.fullName, v.passengers, extraNames)
+      const bad = missingPassengerIndex(names)
+      if (bad >= 0) throw new Error(`Enter the name of passenger ${bad + 1}.`)
       const b = await createBooking({
         tripId: id!, accommodationId: v.accommodationId, pax: v.passengers,
-        name: v.fullName, email: v.email, phone: v.phone,
+        name: v.fullName, email: v.email, phone: v.phone, passengerNames: names,
       })
       setBooking(b); setPayment(null); setTicket(null)
     } catch (e) {
@@ -229,6 +245,20 @@ export function TripDetails() {
                       <div className="space-y-1.5"><Label htmlFor="email">Email</Label><Input id="email" type="email" placeholder="you@example.com" {...register("email")} />{errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}</div>
                       <div className="space-y-1.5"><Label htmlFor="phone">Phone</Label><Input id="phone" placeholder="0917 123 4567" {...register("phone")} />{errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}</div>
                       <div className="space-y-1.5"><Label htmlFor="passengers">Passengers</Label><Input id="passengers" type="number" min={1} max={100} {...register("passengers")} />{errors.passengers && <p className="text-xs text-destructive">{errors.passengers.message}</p>}</div>
+                      {extraNames.length > 0 && (
+                        <div className="space-y-1.5">
+                          <Label>Passenger names</Label>
+                          {extraNames.map((n, i) => (
+                            <Input
+                              key={i}
+                              placeholder={`Passenger ${i + 2} full name`}
+                              value={n}
+                              onChange={(e) => setExtraNames((prev) => prev.map((v, j) => (j === i ? e.target.value : v)))}
+                            />
+                          ))}
+                          <p className="text-xs text-muted-foreground">Passenger 1 is the full name above.</p>
+                        </div>
+                      )}
                       {preview && (
                         <div className="rounded-xl bg-muted p-3 text-sm space-y-1">
                           <div className="flex justify-between"><span>Fare × {preview.pax}</span><span>₱{formatPeso(preview.gross)}</span></div>

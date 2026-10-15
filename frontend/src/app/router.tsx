@@ -13,6 +13,7 @@ import RoutesAdmin from "@/pages/dashboard/Routes"
 import TripsAdmin from "@/pages/dashboard/Trips"
 import AccommodationsAdmin from "@/pages/dashboard/Accommodations"
 import BookingsAdmin from "@/pages/dashboard/Bookings"
+import UsersAdmin from "@/pages/dashboard/Users"
 import Reports from "@/pages/dashboard/Reports"
 import MyBookings from "@/pages/MyBookings"
 
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
           { path: "trips", element: <TripsAdmin /> },
           { path: "accommodations", element: <AccommodationsAdmin /> },
           { path: "bookings", element: <BookingsAdmin /> },
+          { path: "users", element: <UsersAdmin /> },
           { path: "reports", element: <Reports /> },
         ],
       },

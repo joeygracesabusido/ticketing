@@ -310,10 +310,13 @@ returns numeric language sql stable as
 $$ select coalesce(nullif((select value from public.app_settings where key='reservation_hold_hours'),''), '4')::numeric $$;
 
 -- ---------- RPC: create_booking (atomic hold) ----------
-create or replace function public.create_booking(
+drop function if exists public.create_booking(uuid, uuid, int, text, text, text, text);
+
+create function public.create_booking(
   p_trip_id uuid, p_accommodation_id uuid, p_pax int,
   p_name text, p_email text, p_phone text,
-  p_idempotency text default null
+  p_idempotency text default null,
+  p_passenger_names text[] default null
 ) returns public.bookings
 language plpgsql security definer set search_path = public as $$
 declare
@@ -325,11 +328,15 @@ declare
   v_vat numeric(12,2);
   v_ref text;
   v_b bookings%rowtype;
+  v_pname text;
   i int;
 begin
   if p_pax < 1 or p_pax > 100 then raise exception 'Pax must be 1-100'; end if;
   if p_name is null or length(trim(p_name)) < 2 then raise exception 'Full name required'; end if;
   if p_email is null or p_email !~ '.+@.+\..+' then raise exception 'Valid email required'; end if;
+  if p_passenger_names is not null and array_length(p_passenger_names, 1) <> p_pax then
+    raise exception 'Passenger names count must match pax';
+  end if;
   if p_idempotency is not null then
     select * into v_b from bookings where idempotency_key = p_idempotency;
     if found then return v_b; end if;
@@ -363,8 +370,14 @@ begin
     'held', now() + (v_hold || ' hours')::interval, p_idempotency)
   returning * into v_b;
   for i in 1..p_pax loop
+    if p_passenger_names is not null then
+      v_pname := trim(coalesce(p_passenger_names[i], ''));
+      if length(v_pname) < 2 then raise exception 'Passenger % name required', i; end if;
+    else
+      v_pname := case when i = 1 then trim(p_name) else 'Passenger ' || i end;
+    end if;
     insert into booking_passengers (booking_id, full_name, passenger_type, fare_share)
-    values (v_b.id, case when i = 1 then trim(p_name) else 'Passenger ' || i end,
+    values (v_b.id, v_pname,
       'adult', round((v_total / p_pax)::numeric, 2));
   end loop;
   update trip_accommodation_inventory set held = held + p_pax where id = v_inv.id;
@@ -598,3 +611,151 @@ drop trigger if exists trg_accommodations_backfill_inventory on public.vessel_ac
 create trigger trg_accommodations_backfill_inventory
   after insert on public.vessel_accommodations
   for each row execute function public.backfill_accommodation_inventory();
+
+-- =============================================================
+-- Admin User Management RBAC (2026-10-16, mirrors
+-- supabase/migrations/20261016_user_management_rbac.sql)
+-- =============================================================
+alter table public.profiles add column if not exists email text;
+alter table public.profiles add column if not exists first_name text;
+alter table public.profiles add column if not exists last_name text;
+alter table public.profiles add column if not exists is_active boolean not null default true;
+alter table public.profiles add column if not exists created_at timestamptz not null default now();
+alter table public.profiles add column if not exists updated_at timestamptz not null default now();
+
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles
+  add constraint profiles_role_check check (role in ('client', 'staff', 'manager', 'admin'));
+alter table public.profiles alter column role set default 'client';
+
+create index if not exists profiles_role_idx on public.profiles (role);
+create index if not exists profiles_active_idx on public.profiles (is_active);
+create index if not exists profiles_email_idx on public.profiles (email);
+
+create or replace function public.touch_profiles_updated_at()
+returns trigger language plpgsql as $$
+begin new.updated_at = now(); return new; end $$;
+
+drop trigger if exists trg_profiles_touch on public.profiles;
+create trigger trg_profiles_touch
+  before update on public.profiles
+  for each row execute function public.touch_profiles_updated_at();
+
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, role, email, first_name, last_name, is_active)
+  values (
+    new.id,
+    'client',
+    new.email,
+    nullif(new.raw_user_meta_data ->> 'first_name', ''),
+    nullif(new.raw_user_meta_data ->> 'last_name', '')
+    , true
+  )
+  on conflict (id) do update set
+    email = excluded.email,
+    first_name = coalesce(excluded.first_name, public.profiles.first_name),
+    last_name = coalesce(excluded.last_name, public.profiles.last_name);
+  return new;
+end $$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users for each row execute function public.handle_new_user();
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "read own profile" on public.profiles;
+create policy "read own profile" on public.profiles
+  for select using (auth.uid() = id);
+
+drop policy if exists "admin read all profiles" on public.profiles;
+create policy "admin read all profiles" on public.profiles
+  for select using (public.is_admin());
+
+drop policy if exists "admin write profiles" on public.profiles;
+
+create or replace function public.set_user_role(p_target uuid, p_role text)
+returns public.profiles
+language plpgsql security definer set search_path = public as $$
+declare
+  v_old public.profiles%rowtype;
+  v_others int;
+begin
+  if not public.is_admin() then raise exception 'Admin only'; end if;
+  if p_role not in ('client', 'staff', 'manager', 'admin') then
+    raise exception 'Invalid role: %', p_role;
+  end if;
+  select * into v_old from public.profiles where id = p_target;
+  if not found then raise exception 'Profile not found'; end if;
+  if v_old.role = p_role then return v_old; end if;
+  if v_old.role = 'admin' and p_role <> 'admin' and v_old.is_active then
+    select count(*) into v_others from public.profiles
+      where role = 'admin' and is_active = true and id <> p_target;
+    if v_others = 0 then raise exception 'Cannot demote the last active administrator'; end if;
+  end if;
+  update public.profiles set role = p_role where id = p_target
+    returning * into v_old;
+  insert into public.audit_logs (actor, action, entity, entity_id, meta)
+    values (auth.uid(), 'role.changed', 'profiles', p_target,
+      jsonb_build_object('old_role', v_old.role, 'new_role', p_role));
+  return v_old;
+end $$;
+
+create or replace function public.set_user_active(p_target uuid, p_active boolean)
+returns public.profiles
+language plpgsql security definer set search_path = public as $$
+declare
+  v_p public.profiles%rowtype;
+  v_others int;
+begin
+  if not public.is_admin() then raise exception 'Admin only'; end if;
+  select * into v_p from public.profiles where id = p_target;
+  if not found then raise exception 'Profile not found'; end if;
+  if v_p.is_active = p_active then return v_p; end if;
+  if v_p.role = 'admin' and not p_active then
+    select count(*) into v_others from public.profiles
+      where role = 'admin' and is_active = true and id <> p_target;
+    if v_others = 0 then raise exception 'Cannot deactivate the last active administrator'; end if;
+  end if;
+  update public.profiles set is_active = p_active where id = p_target
+    returning * into v_p;
+  insert into public.audit_logs (actor, action, entity, entity_id, meta)
+    values (auth.uid(),
+      case when p_active then 'user.activated' else 'user.deactivated' end,
+      'profiles', p_target, jsonb_build_object('is_active', p_active));
+  return v_p;
+end $$;
+
+create or replace function public.claim_first_admin()
+returns public.profiles
+language plpgsql security definer set search_path = public as $$
+declare
+  v_email text;
+  v_allow text;
+  v_admins int;
+  v_p public.profiles%rowtype;
+begin
+  if auth.uid() is null then raise exception 'Login required'; end if;
+  select email into v_email from auth.users where id = auth.uid();
+  if v_email is null then raise exception 'Account not found'; end if;
+  select value into v_allow from public.app_settings where key = 'bootstrap_admin_email';
+  if v_allow is null or btrim(v_allow) = '' then
+    raise exception 'Bootstrap disabled (no bootstrap_admin_email configured)';
+  end if;
+  if lower(btrim(v_email)) <> lower(btrim(v_allow)) then
+    raise exception 'This account is not the configured bootstrap administrator';
+  end if;
+  select count(*) into v_admins from public.profiles where role = 'admin' and is_active = true;
+  if v_admins > 0 then raise exception 'Administrator already exists'; end if;
+  insert into public.profiles (id, role, email, is_active)
+    values (auth.uid(), 'admin', v_email, true)
+    on conflict (id) do update set role = 'admin', is_active = true, email = excluded.email
+    returning * into v_p;
+  insert into public.audit_logs (actor, action, entity, entity_id, meta)
+    values (auth.uid(), 'role.changed', 'profiles', auth.uid(),
+      jsonb_build_object('old_role', 'bootstrap', 'new_role', 'admin'));
+  delete from public.app_settings where key = 'bootstrap_admin_email';
+  return v_p;
+end $$;
