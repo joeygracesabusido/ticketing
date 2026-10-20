@@ -30,7 +30,7 @@ export function DashboardLayout() {
     <div className="min-h-screen bg-muted/40">
       <Header />
       <div className="container mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
-        <aside className="md:w-60 shrink-0 md:sticky md:top-20 self-start">
+        <aside className="w-full min-w-0 md:w-60 shrink-0 md:sticky md:top-20 md:self-start">
           <nav className="flex md:flex-col gap-1 overflow-x-auto rounded-2xl border bg-card p-3 shadow-sm">
             <div className="hidden md:flex items-center gap-2.5 px-2 pt-1 pb-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-blue-600 shadow-sm">
